@@ -231,7 +231,7 @@ impl SimdImageOps {
         let mut h_proj = vec![0u32; height];
         let mut v_proj = vec![0u32; width];
 
-        for (y, h_slot) in h_proj.iter_mut().enumerate().take(height) {
+        for y in 0..height {
             let row_start = y * width;
             let mut count = 0u32;
             let mut x = 0;
@@ -257,7 +257,7 @@ impl SimdImageOps {
                     count += 1;
                 }
             }
-            *h_slot = count;
+            h_proj[y] = count;
         }
 
         for x in 0..width {
@@ -347,7 +347,7 @@ impl SimdImageOps {
         for y in 0..height {
             for x in 0..width {
                 let mut sum = 0.0;
-                let y_start = y.saturating_sub(radius);
+                let y_start = if y >= radius { y - radius } else { 0 };
                 let y_end = (y + radius + 1).min(height);
                 let count = (y_end - y_start) as f32;
                 for yi in y_start..y_end {
@@ -369,7 +369,7 @@ impl SimdImageOps {
         for y in 0..height {
             for x in 0..width {
                 let mut sum = 0.0;
-                let y_start = y.saturating_sub(radius);
+                let y_start = if y >= radius { y - radius } else { 0 };
                 let y_end = (y + radius + 1).min(height);
                 let count = (y_end - y_start) as f32;
                 for yi in y_start..y_end {
@@ -393,7 +393,7 @@ fn scalar_horizontal_blur(
         let row_start = y * width;
         for x in 0..width {
             let mut sum = 0.0;
-            let x_start = x.saturating_sub(radius);
+            let x_start = if x >= radius { x - radius } else { 0 };
             let x_end = (x + radius + 1).min(width);
             let count = (x_end - x_start) as f32;
             for xi in x_start..x_end {
@@ -569,8 +569,9 @@ unsafe fn avx2_max_f32x8(v: [f32; 8]) -> f32 {
     use std::arch::x86_64::_mm256_permutevar8x32_ps;
     use std::arch::x86_64::_mm_max_ps;
     use std::arch::x86_64::_mm_storeu_ps;
+    use std::arch::x86_64::_mm256_set_epi64x;
     let vv = _mm256_loadu_ps(v.as_ptr());
-    let perm = _mm256_permutevar8x32_ps(vv, _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0));
+    let perm = _mm256_permutevar8x32_ps(vv, _mm256_set_epi64x(5, 6, 7, 8));
     let max_v = _mm256_max_ps(vv, perm);
     let low = _mm256_castps256_ps128(max_v);
     let high = _mm256_extractf128_ps(max_v, 1);
